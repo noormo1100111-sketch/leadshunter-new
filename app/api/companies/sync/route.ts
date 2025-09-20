@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
           
           // التحقق من وجود الشركة أولاً
           const existing = await get(`
-            SELECT id, name FROM companies WHERE LOWER(name) = LOWER(?)
+            SELECT id, name FROM companies WHERE LOWER(name) = LOWER($1)
           `, [company.name.trim()]);
           
           console.log(`بحث عن شركة "${company.name}":`, existing);
@@ -80,8 +80,8 @@ export async function POST(request: NextRequest) {
             // تحديث الشركة الموجودة ببيانات جديدة
             await run(`
               UPDATE companies 
-              SET email = ?, industry = ?, size = ?, location = ?, updated_at = datetime('now')
-              WHERE id = ?
+              SET email = $1, industry = $2, size = $3, location = $4, updated_at = CURRENT_TIMESTAMP
+              WHERE id = $5
             `, [
               company.email || existing.email,
               company.industry || existing.industry,
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
             
             const result = await run(`
               INSERT INTO companies (name, email, industry, size, location, status, created_at)
-              VALUES (?, ?, ?, ?, ?, 'uncontacted', datetime('now'))
+              VALUES ($1, $2, $3, $4, $5, 'uncontacted', CURRENT_TIMESTAMP)
             `, [
               company.name.trim(),
               company.email || null,
