@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserByEmail, verifyPassword, generateToken } from '@/lib/auth';
-import { initDatabase } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
-    await initDatabase();
-    
     const { email, password } = await request.json();
 
     const user = await getUserByEmail(email);
