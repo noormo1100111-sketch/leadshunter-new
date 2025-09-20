@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createUser, getUserByEmail } from '@/lib/auth';
-import { initDatabase } from '@/lib/database';
 
 export async function POST(request: NextRequest) {
   try {
-    await initDatabase();
-    
     const { email, password, name } = await request.json();
 
     const existingUser = await getUserByEmail(email);
