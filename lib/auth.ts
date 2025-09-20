@@ -40,9 +40,14 @@ export const getUserByEmail = async (email: string): Promise<any | null> => {
 
 export const createUser = async (email: string, password: string, name: string): Promise<User> => {
   const hashedPassword = await hashPassword(password);
+  
+  // Check if this is the first user - make them admin
+  const userCount = await query('SELECT COUNT(*) as count FROM users');
+  const role = userCount[0].count === '0' ? 'admin' : 'user';
+  
   const result = await query(
-    'INSERT INTO users (email, password, name) VALUES ($1, $2, $3) RETURNING id',
-    [email, hashedPassword, name]
+    'INSERT INTO users (email, password, name, role) VALUES ($1, $2, $3, $4) RETURNING id',
+    [email, hashedPassword, name, role]
   );
   const users = await query('SELECT * FROM users WHERE id = $1', [result[0].id]);
   return users[0];
