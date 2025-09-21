@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Pool } from 'pg';
-import { fetchCompaniesFromApollo } from '@/lib/apollo';
+import { fetchCompaniesFromSmartlead } from '@/lib/smartlead';
 
 export async function POST(request: NextRequest) {
   const pool = new Pool({
@@ -14,9 +14,9 @@ export async function POST(request: NextRequest) {
     
     console.log('إعدادات البحث:', { locations, industries, sizes, limit });
     
-    // جلب شركات حقيقية من Apollo مع الفلاتر
-    const companies = await fetchCompaniesFromApollo(limit, { locations, industries, sizes });
-    console.log('تم جلب', companies.length, 'شركة من Apollo');
+    // جلب شركات حقيقية من Smartlead مع الفلاتر
+    const companies = await fetchCompaniesFromSmartlead(limit, { locations, industries, sizes });
+    console.log('تم جلب', companies.length, 'شركة من Smartlead');
     
     const client = await pool.connect();
     let imported = 0;

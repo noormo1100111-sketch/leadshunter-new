@@ -219,7 +219,7 @@ export default function CompaniesPage({ token, userRole, userId }: CompaniesPage
                   className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
                 >
                   <RefreshCw className="h-4 w-4 mr-2" />
-                  مزامنة شركات
+                  مزامنة Smartlead
                 </button>
                 
                 <button
@@ -301,7 +301,7 @@ export default function CompaniesPage({ token, userRole, userId }: CompaniesPage
       {/* نافذة خيارات المزامنة */}
       {showSyncOptions && (
         <div className="bg-white rounded-lg shadow p-4 mb-6 border border-blue-200">
-          <h3 className="text-lg font-medium mb-4">خيارات المزامنة</h3>
+          <h3 className="text-lg font-medium mb-4">مزامنة Smartlead.ai</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div>
