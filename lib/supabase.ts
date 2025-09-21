@@ -1,50 +1,27 @@
 import { Pool } from 'pg';
 
-const pool = new Pool({
-  connectionString: 'postgresql://neondb_owner:npg_0FTPBkvp7Hdo@ep-plain-queen-agvjzsen-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require',
+// Centralized database pool.
+// This ensures that we reuse connections instead of creating new ones for every request.
+let pool: Pool;
+
+if (!pool) {
+  pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false },
   connectionTimeoutMillis: 10000,
   idleTimeoutMillis: 30000,
   max: 10
-});
+  });
+}
 
-export const query = async (text: string, params: any[] = []): Promise<any[]> => {
-  const client = await pool.connect();
-  try {
-    const result = await client.query(text, params);
-    return result.rows;
-  } finally {
-    client.release();
-  }
-};
+export const db = pool;
 
-export const run = async (text: string, params: any[] = []): Promise<any> => {
-  const client = await pool.connect();
-  try {
-    const result = await client.query(text, params);
-    return {
-      changes: result.rowCount,
-      lastID: result.rows[0]?.id || null
-    };
-  } finally {
-    client.release();
-  }
-};
-
-export const get = async (text: string, params: any[] = []): Promise<any> => {
-  const client = await pool.connect();
-  try {
-    const result = await client.query(text, params);
-    return result.rows[0] || null;
-  } finally {
-    client.release();
-  }
-};
-
+// The functions below are for one-time setup and can be removed or kept as is.
+// For consistency, they should also use the central pool.
 export const initDatabase = async (): Promise<void> => {
   try {
     // Users table
-    await query(`
+    await db.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         email VARCHAR(255) UNIQUE NOT NULL,
@@ -56,7 +33,7 @@ export const initDatabase = async (): Promise<void> => {
     `);
 
     // Companies table
-    await query(`
+    await db.query(`
       CREATE TABLE IF NOT EXISTS companies (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) UNIQUE NOT NULL,
@@ -73,13 +50,13 @@ export const initDatabase = async (): Promise<void> => {
     `);
 
     // Create admin user if not exists
-    const adminExists = await get(
+    const { rows: adminExistsRows } = await db.query(
       'SELECT id FROM users WHERE email = $1',
       ['admin@leadshunter.com']
     );
 
-    if (!adminExists) {
-      await query(`
+    if (adminExistsRows.length === 0) {
+      await db.query(`
         INSERT INTO users (email, password, name, role) 
         VALUES ($1, $2, $3, $4)
       `, [

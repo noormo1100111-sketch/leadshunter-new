@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Pool } from 'pg';
+import { db } from '@/lib/supabase'; // استيراد الاتصال المركزي
 
 /**
  * Maps Arabic filter values to English values expected by the Apollo API.
@@ -67,12 +67,6 @@ const fetchCompaniesFromApolloWithFilters = async (apiKey: string, { locations =
 };
 
 export async function POST(request: NextRequest) {
-  const pool = new Pool({
-    // استخدام متغير البيئة لقاعدة البيانات لمرونة أكبر
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
-  });
-
   try {
     const body = await request.json();
     const { locations = ['السعودية'], industries = ['البنوك'], sizes = ['متوسطة'], limit = 5 } = body;
@@ -91,7 +85,7 @@ export async function POST(request: NextRequest) {
     const companies = await fetchCompaniesFromApolloWithFilters(apolloApiKey, { ...apolloFilters, limit });
     console.log('تم جلب', companies.length, 'شركة من Apollo.io');
     
-    const client = await pool.connect();
+    const client = await db.connect();
     let imported = 0;
     
     for (const company of companies) {
@@ -120,7 +114,6 @@ export async function POST(request: NextRequest) {
     }
     
     client.release();
-    await pool.end();
     
     return NextResponse.json({
       success: true,
@@ -130,9 +123,6 @@ export async function POST(request: NextRequest) {
     });
     
   } catch (error) {
-    try {
-      await pool.end();
-    } catch {}
     return NextResponse.json({ 
       error: 'فشل في المزامنة',
       details: error instanceof Error ? error.message : 'Unknown error'
