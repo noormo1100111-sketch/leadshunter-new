@@ -25,24 +25,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
-      // Verify token and get user info
-      fetch('/api/auth/verify', {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.user) setUser(data.user);
-      })
-      .catch(() => localStorage.removeItem('token'))
-      .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setUser({
+          id: payload.id,
+          email: payload.email,
+          name: payload.name || 'User',
+          role: payload.role
+        });
+      } catch {
+        localStorage.removeItem('token');
+      }
     }
+    setLoading(false);
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch('/api/simple-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })

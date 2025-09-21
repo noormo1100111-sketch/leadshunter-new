@@ -48,11 +48,9 @@ export default function LoginForm() {
           body: JSON.stringify({ email, password })
         });
         
-        if (res.ok) {
+        const success = await login(email, password);
+        if (!success) {
           const data = await res.json();
-          localStorage.setItem('token', data.token);
-          window.location.reload();
-        } else {
           const data = await res.json();
           setError(data.error || 'بيانات خاطئة');
         }
@@ -70,11 +68,8 @@ export default function LoginForm() {
             body: JSON.stringify({ email, password })
           });
           
-          if (loginRes.ok) {
-            const data = await loginRes.json();
-            localStorage.setItem('token', data.token);
-            window.location.reload();
-          } else {
+          const success = await login(email, password);
+          if (!success) {
             setError('تم التسجيل بنجاح ولكن فشل تسجيل الدخول');
           }
         } else {
