@@ -42,7 +42,7 @@ export default function LoginForm() {
 
     try {
       if (isLogin) {
-        const res = await fetch('/api/auth/login', {
+        const res = await fetch('/api/simple-login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password })
@@ -57,7 +57,7 @@ export default function LoginForm() {
           setError(data.error || 'بيانات خاطئة');
         }
       } else {
-        const res = await fetch('/api/test-register', {
+        const res = await fetch('/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password, name })
