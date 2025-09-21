@@ -30,7 +30,11 @@ export default function CompaniesPage({ token, userRole, userId }: CompaniesPage
   const [assignUserId, setAssignUserId] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [showSyncOptions, setShowSyncOptions] = useState(false);
-  const [syncSettings, setSyncSettings] = useState({
+  const [syncSettings, setSyncSettings] = useState<{
+    locations: string[];
+    industries: string[];
+    limit: number;
+  }>({
     locations: ['السعودية'],
     industries: ['تكنولوجيا'],
     limit: 5
@@ -44,11 +48,11 @@ export default function CompaniesPage({ token, userRole, userId }: CompaniesPage
         }),
         userRole === 'admin' ? fetch('/api/users', {
           headers: { Authorization: `Bearer ${token}` }
-        }) : Promise.resolve({ json: () => ({ users: [] }) })
+        }) : Promise.resolve({ json: () => Promise.resolve({ users: [] }) })
       ]);
 
       const companiesData = await companiesRes.json();
-      const usersData = await usersRes.json();
+      const usersData = userRole === 'admin' ? await usersRes.json() : { users: [] };
 
       setCompanies(companiesData.companies || []);
       setUsers(usersData.users || []);
