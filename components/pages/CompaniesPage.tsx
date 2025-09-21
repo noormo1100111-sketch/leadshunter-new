@@ -42,20 +42,19 @@ export default function CompaniesPage({ token, userRole, userId }: CompaniesPage
 
   const fetchData = async () => {
     try {
-      const [companiesRes, usersRes] = await Promise.all([
-        fetch(`/api/companies?search=${search}&status=${statusFilter}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
-        userRole === 'admin' ? fetch('/api/users', {
-          headers: { Authorization: `Bearer ${token}` }
-        }) : Promise.resolve({ json: () => Promise.resolve({ users: [] }) })
-      ]);
-
+      const companiesRes = await fetch(`/api/companies?search=${search}&status=${statusFilter}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       const companiesData = await companiesRes.json();
-      const usersData = userRole === 'admin' ? await usersRes.json() : { users: [] };
-
       setCompanies(companiesData.companies || []);
-      setUsers(usersData.users || []);
+
+      if (userRole === 'admin') {
+        const usersRes = await fetch('/api/users', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const usersData = await usersRes.json();
+        setUsers(usersData.users || []);
+      }
     } catch (error) {
       console.error('فشل في جلب البيانات:', error);
     }
