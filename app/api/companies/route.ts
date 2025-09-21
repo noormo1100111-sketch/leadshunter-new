@@ -1,16 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/supabase';
-import jwt from 'jsonwebtoken';
+import { verifyToken } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
-    let user = null;
-    if (token) {
-      try {
-        user = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
-      } catch {}
-    }
+    const user = token ? verifyToken(token) : null;
     
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -27,9 +22,15 @@ export async function GET(request: NextRequest) {
     let paramIndex = 1;
     
     if (search) {
-      whereClause += ` WHERE (name ILIKE $${paramIndex} OR email ILIKE $${paramIndex+1} OR industry ILIKE $${paramIndex+2})`;
+      // Use ILIKE for case-insensitive search in PostgreSQL
+      whereClause += ` WHERE (name ILIKE $${paramIndex} OR email ILIKE $${paramIndex} OR industry ILIKE $${paramIndex})`;
       params.push(`%${search}%`, `%${search}%`, `%${search}%`);
-      paramIndex += 3;
+      // This is incorrect logic for parameter indexing. Let's fix it.
+      // The correct way is to build the params array and the query string together.
+      // Let's simplify.
+      whereClause = ` WHERE (name ILIKE $1 OR email ILIKE $1 OR industry ILIKE $1)`;
+      params = [`%${search}%`];
+      paramIndex = 2;
     }
     
     if (status) {
@@ -46,17 +47,20 @@ export async function GET(request: NextRequest) {
     
     const offset = (page - 1) * limit;
     
-    const companiesResult = await db.query(`
+    const companiesQuery = `
       SELECT c.*, u.name as assigned_user_name, cu.name as contacted_user_name
       FROM companies c
       LEFT JOIN users u ON c.assigned_to = u.id
       LEFT JOIN users cu ON c.contacted_by = cu.id
       ${whereClause}
       ORDER BY c.created_at DESC
-      LIMIT $${paramIndex} OFFSET $${paramIndex+1}
-    `, [...params, limit, offset]);
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+    `;
+    const companiesResult = await db.query(companiesQuery, [...params, limit, offset]);
     
-    const totalResult = await db.query(`SELECT COUNT(*) as total FROM companies${whereClause}`, params);
+    const totalQuery = `SELECT COUNT(*) as total FROM companies${whereClause}`;
+    // The params for count should not include limit and offset
+    const totalResult = await db.query(totalQuery, params.slice(0, paramIndex - 1));
     const total = parseInt(totalResult.rows[0].total);
     
     return NextResponse.json({
@@ -69,7 +73,7 @@ export async function GET(request: NextRequest) {
       }
     });
   } catch (error) {
-    console.error('Companies fetch error:', error);
+    console.error('❌ Companies fetch error:', error);
     return NextResponse.json({ error: 'Failed to fetch companies' }, { status: 500 });
   }
 }
@@ -77,12 +81,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
-    let user = null;
-    if (token) {
-      try {
-        user = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
-      } catch {}
-    }
+    const user = token ? verifyToken(token) : null;
     
     if (!user || user.role !== 'admin') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -97,7 +96,10 @@ export async function POST(request: NextRequest) {
     `, [name, email, industry, size, location]);
     
     return NextResponse.json({ id: result.rows[0].id });
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to create company' }, { status: 500 });
+  } catch (error: any) {
+    console.error('❌ Company creation error:', error);
+    const isDuplicate = error.code === '23505'; // PostgreSQL unique violation code
+    const errorMessage = isDuplicate ? `شركة باسم "${(await request.json()).name}" موجودة بالفعل.` : 'Failed to create company';
+    return NextResponse.json({ error: errorMessage }, { status: isDuplicate ? 409 : 500 });
   }
 }
