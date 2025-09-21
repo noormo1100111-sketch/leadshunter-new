@@ -49,6 +49,9 @@ export async function POST(request: NextRequest) {
       let imported = 0;
       let skipped = 0;
       
+      // Connect to the database once before the loop
+      const client = await db.connect();
+      try {
       for (const company of companies) {
         try {
           console.log('محاولة إدراج شركة:', {
@@ -74,8 +77,6 @@ export async function POST(request: NextRequest) {
           }
           
           console.log('✅ اسم الشركة صحيح، المتابعة...');
-          
-          const client = await db.connect();
           
           // التحقق من وجود الشركة أولاً
           const existingResult = await client.query(
@@ -112,13 +113,16 @@ export async function POST(request: NextRequest) {
               skipped++;
             }
           }
-          
-          client.release();
         } catch (error) {
           console.error('خطأ في إدراج الشركة:', error);
           console.error('بيانات الشركة:', company);
           skipped++;
         }
+      }
+      } finally {
+        // Release the client back to the pool
+        client.release();
+        console.log('🔌 تم تحرير اتصال قاعدة البيانات.');
       }
       
       const result = { 
