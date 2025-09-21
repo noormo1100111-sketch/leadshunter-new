@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { query, run } from './supabase';
+import { db } from './supabase';
 
 export interface User {
   id: number;
@@ -34,21 +34,22 @@ export const verifyToken = (token: string): User | null => {
 };
 
 export const getUserByEmail = async (email: string): Promise<any | null> => {
-  const users = await query('SELECT * FROM users WHERE email = $1', [email]);
-  return users[0] || null;
+  const { rows } = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+  return rows[0] || null;
 };
 
 export const createUser = async (email: string, password: string, name: string): Promise<User> => {
   const hashedPassword = await hashPassword(password);
   
   // Check if this is the first user - make them admin
-  const userCount = await query('SELECT COUNT(*) as count FROM users');
-  const role = userCount[0].count === '0' ? 'admin' : 'user';
+  const { rows: userCountRows } = await db.query('SELECT COUNT(*) as count FROM users');
+  const role = userCountRows[0].count === '0' ? 'admin' : 'user';
   
-  const result = await query(
+  const { rows: insertResult } = await db.query(
     'INSERT INTO users (email, password, name, role) VALUES ($1, $2, $3, $4) RETURNING id',
     [email, hashedPassword, name, role]
   );
-  const users = await query('SELECT * FROM users WHERE id = $1', [result[0].id]);
-  return users[0];
+  
+  const { rows: newUsers } = await db.query('SELECT * FROM users WHERE id = $1', [insertResult[0].id]);
+  return newUsers[0];
 };

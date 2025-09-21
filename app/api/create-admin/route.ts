@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { query, get } from '@/lib/supabase';
+import { db } from '@/lib/supabase';
 import bcrypt from 'bcryptjs';
 
 export async function GET() {
   try {
     // Create tables if they don't exist
-    await query(`
+    await db.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         email VARCHAR(255) UNIQUE NOT NULL,
@@ -16,7 +16,7 @@ export async function GET() {
       )
     `);
 
-    await query(`
+    await db.query(`
       CREATE TABLE IF NOT EXISTS companies (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) UNIQUE NOT NULL,
@@ -33,12 +33,12 @@ export async function GET() {
     `);
 
     // Check if admin already exists
-    const adminExists = await get(
+    const { rows: adminExistsRows } = await db.query(
       'SELECT id FROM users WHERE email = $1',
       ['admin@leadshunter.com']
     );
 
-    if (adminExists) {
+    if (adminExistsRows.length > 0) {
       return NextResponse.json({
         success: true,
         message: 'Admin already exists',
@@ -53,7 +53,7 @@ export async function GET() {
     const hashedPassword = await bcrypt.hash('password', 10);
 
     // Create admin user
-    await query(`
+    await db.query(`
       INSERT INTO users (email, password, name, role) 
       VALUES ($1, $2, $3, $4)
     `, [

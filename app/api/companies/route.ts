@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Pool } from 'pg';
+import { db } from '@/lib/supabase';
 import jwt from 'jsonwebtoken';
 
 export async function GET(request: NextRequest) {
@@ -21,13 +21,6 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10');
     const search = searchParams.get('search') || '';
     const status = searchParams.get('status') || '';
-    
-    const pool = new Pool({
-      connectionString: 'postgresql://neondb_owner:npg_0FTPBkvp7Hdo@ep-plain-queen-agvjzsen-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require',
-      ssl: { rejectUnauthorized: false }
-    });
-    
-    const client = await pool.connect();
     
     let whereClause = '';
     let params: any[] = [];
@@ -53,7 +46,7 @@ export async function GET(request: NextRequest) {
     
     const offset = (page - 1) * limit;
     
-    const companiesResult = await client.query(`
+    const companiesResult = await db.query(`
       SELECT c.*, u.name as assigned_user_name, cu.name as contacted_user_name
       FROM companies c
       LEFT JOIN users u ON c.assigned_to = u.id
@@ -63,11 +56,8 @@ export async function GET(request: NextRequest) {
       LIMIT $${paramIndex} OFFSET $${paramIndex+1}
     `, [...params, limit, offset]);
     
-    const totalResult = await client.query(`SELECT COUNT(*) as total FROM companies${whereClause}`, params);
+    const totalResult = await db.query(`SELECT COUNT(*) as total FROM companies${whereClause}`, params);
     const total = parseInt(totalResult.rows[0].total);
-    
-    client.release();
-    await pool.end();
     
     return NextResponse.json({
       companies: companiesResult.rows,
@@ -100,21 +90,11 @@ export async function POST(request: NextRequest) {
 
     const { name, email, industry, size, location } = await request.json();
     
-    const pool = new Pool({
-      connectionString: 'postgresql://neondb_owner:npg_0FTPBkvp7Hdo@ep-plain-queen-agvjzsen-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require',
-      ssl: { rejectUnauthorized: false }
-    });
-    
-    const client = await pool.connect();
-    
-    const result = await client.query(`
+    const result = await db.query(`
       INSERT INTO companies (name, email, industry, size, location, status, created_at)
       VALUES ($1, $2, $3, $4, $5, 'uncontacted', CURRENT_TIMESTAMP)
       RETURNING id
     `, [name, email, industry, size, location]);
-    
-    client.release();
-    await pool.end();
     
     return NextResponse.json({ id: result.rows[0].id });
   } catch (error) {

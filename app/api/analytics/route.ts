@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/supabase';
+import { db } from '@/lib/supabase';
 import { verifyToken } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
@@ -12,17 +12,17 @@ export async function GET(request: NextRequest) {
     }
 
     // Companies by status
-    const statusStats = await query(`
+    const { rows: statusStats } = await db.query(`
       SELECT status, COUNT(*) as count
       FROM companies
-      ${user.role !== 'admin' ? 'WHERE assigned_to = ?' : ''}
+      ${user.role !== 'admin' ? 'WHERE assigned_to = $1' : ''}
       GROUP BY status
     `, user.role !== 'admin' ? [user.id] : []);
 
     // Companies contacted per user (admin only)
     let userStats = [];
     if (user.role === 'admin') {
-      userStats = await query(`
+      const { rows } = await db.query(`
         SELECT u.name, COUNT(c.id) as contacted_count
         FROM users u
         LEFT JOIN companies c ON u.id = c.contacted_by
@@ -30,25 +30,26 @@ export async function GET(request: NextRequest) {
         GROUP BY u.id, u.name
         ORDER BY contacted_count DESC
       `);
+      userStats = rows;
     }
 
     // Total counts
-    const totalCompanies = await query(`
+    const { rows: totalCompaniesRows } = await db.query(`
       SELECT COUNT(*) as total FROM companies
-      ${user.role !== 'admin' ? 'WHERE assigned_to = ?' : ''}
+      ${user.role !== 'admin' ? 'WHERE assigned_to = $1' : ''}
     `, user.role !== 'admin' ? [user.id] : []);
 
-    const contactedCompanies = await query(`
+    const { rows: contactedCompaniesRows } = await db.query(`
       SELECT COUNT(*) as total FROM companies
       WHERE status = 'contacted'
-      ${user.role !== 'admin' ? 'AND assigned_to = ?' : ''}
+      ${user.role !== 'admin' ? 'AND assigned_to = $1' : ''}
     `, user.role !== 'admin' ? [user.id] : []);
 
     return NextResponse.json({
       statusStats,
       userStats,
-      totalCompanies: totalCompanies[0].total,
-      contactedCompanies: contactedCompanies[0].total
+      totalCompanies: totalCompaniesRows[0].total,
+      contactedCompanies: contactedCompaniesRows[0].total
     });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch analytics' }, { status: 500 });
