@@ -30,6 +30,9 @@ export default function CompaniesPage({ token, userRole, userId }: CompaniesPage
   const [assignUserId, setAssignUserId] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [showSyncOptions, setShowSyncOptions] = useState(false);
+  const [showUploadCSV, setShowUploadCSV] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [syncSettings, setSyncSettings] = useState<{
     locations: string[];
     industries: string[];
@@ -129,6 +132,39 @@ export default function CompaniesPage({ token, userRole, userId }: CompaniesPage
       console.error('فشل في وضع علامة تم التواصل:', error);
     }
   };
+  
+  const uploadCSV = async () => {
+    if (!uploadFile) return;
+    
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', uploadFile);
+      
+      const response = await fetch('/api/upload-csv', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        alert(data.message);
+        await fetchData();
+        setShowUploadCSV(false);
+        setUploadFile(null);
+      } else {
+        alert(`خطأ: ${data.error}`);
+      }
+    } catch (error) {
+      alert('خطأ في رفع الملف');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   return (
     <div className="p-6 w-full min-h-screen">
@@ -176,6 +212,15 @@ export default function CompaniesPage({ token, userRole, userId }: CompaniesPage
                 >
                   <RefreshCw className="h-4 w-4 mr-2" />
                   مزامنة شركات
+                </button>
+                
+                <button
+                  onClick={() => setShowUploadCSV(!showUploadCSV)}
+                  disabled={loading}
+                  className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  رفع CSV
                 </button>
                 
                 <button
@@ -338,6 +383,50 @@ export default function CompaniesPage({ token, userRole, userId }: CompaniesPage
           <p className="text-xs text-gray-500 mt-2">
             اضغط Ctrl لاختيار عدة خيارات
           </p>
+        </div>
+      )}
+
+      {/* نافذة رفع CSV */}
+      {showUploadCSV && (
+        <div className="bg-white rounded-lg shadow p-4 mb-6 border border-green-200">
+          <h3 className="text-lg font-medium mb-4">رفع ملف CSV</h3>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">اختر ملف CSV</label>
+              <input
+                type="file"
+                accept=".csv"
+                onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+              />
+            </div>
+            
+            <div className="bg-gray-50 p-3 rounded text-sm">
+              <p className="font-medium mb-2">تنسيق الملف المطلوب:</p>
+              <p>name, email, industry, size, location</p>
+              <p className="text-gray-600 mt-1">مثال: "Saudi Aramco", "info@aramco.com", "النفط والغاز", "كبيرة", "السعودية"</p>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <button
+                onClick={uploadCSV}
+                disabled={!uploadFile || uploading}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
+              >
+                {uploading ? 'جاري الرفع...' : 'رفع الملف'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowUploadCSV(false);
+                  setUploadFile(null);
+                }}
+                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
