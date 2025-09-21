@@ -180,7 +180,7 @@ export default function DashboardPage({ token, userRole, userId }: DashboardPage
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={analytics.statusStats.map(item => ({
+                  data={(analytics.statusStats || []).map(item => ({
                     ...item,
                     name: item.status === 'contacted' ? 'تم التواصل' :
                           item.status === 'assigned' ? 'معين' : 'لم يتم التواصل'
@@ -193,7 +193,7 @@ export default function DashboardPage({ token, userRole, userId }: DashboardPage
                   fill="#8884d8"
                   dataKey="count"
                 >
-                  {analytics.statusStats.map((entry, index) => (
+                  {(analytics.statusStats || []).map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
@@ -203,11 +203,11 @@ export default function DashboardPage({ token, userRole, userId }: DashboardPage
           </div>
 
           {/* أداء المستخدمين */}
-          {userRole === 'admin' && analytics.userStats.length > 0 && (
+          {userRole === 'admin' && (analytics.userStats || []).length > 0 && (
             <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
               <h3 className="text-lg font-bold mb-4 text-gray-800">أداء المستخدمين</h3>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={analytics.userStats}>
+                <BarChart data={analytics.userStats || []}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
                   <YAxis />
