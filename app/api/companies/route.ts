@@ -22,15 +22,9 @@ export async function GET(request: NextRequest) {
     let paramIndex = 1;
     
     if (search) {
-      // Use ILIKE for case-insensitive search in PostgreSQL
       whereClause += ` WHERE (name ILIKE $${paramIndex} OR email ILIKE $${paramIndex} OR industry ILIKE $${paramIndex})`;
-      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
-      // This is incorrect logic for parameter indexing. Let's fix it.
-      // The correct way is to build the params array and the query string together.
-      // Let's simplify.
-      whereClause = ` WHERE (name ILIKE $1 OR email ILIKE $1 OR industry ILIKE $1)`;
       params = [`%${search}%`];
-      paramIndex = 2;
+      paramIndex++;
     }
     
     if (status) {
@@ -59,8 +53,7 @@ export async function GET(request: NextRequest) {
     const companiesResult = await db.query(companiesQuery, [...params, limit, offset]);
     
     const totalQuery = `SELECT COUNT(*) as total FROM companies${whereClause}`;
-    // The params for count should not include limit and offset
-    const totalResult = await db.query(totalQuery, params.slice(0, paramIndex - 1));
+    const totalResult = await db.query(totalQuery, params);
     const total = parseInt(totalResult.rows[0].total);
     
     return NextResponse.json({
@@ -99,7 +92,12 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('❌ Company creation error:', error);
     const isDuplicate = error.code === '23505'; // PostgreSQL unique violation code
-    const errorMessage = isDuplicate ? `شركة باسم "${(await request.json()).name}" موجودة بالفعل.` : 'Failed to create company';
+    let errorMessage = 'Failed to create company';
+    if (isDuplicate) {
+      // We cannot re-read the body of the request as it's already consumed.
+      // We can provide a more generic message.
+      errorMessage = 'شركة بهذا الاسم موجودة بالفعل.';
+    }
     return NextResponse.json({ error: errorMessage }, { status: isDuplicate ? 409 : 500 });
   }
 }
