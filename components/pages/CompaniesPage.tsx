@@ -232,6 +232,14 @@ export default function CompaniesPage({ token, userRole, userId }: CompaniesPage
                 </button>
                 
                 <button
+                  onClick={() => window.open('/linkedin-guide.md', '_blank')}
+                  className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-gray-700 bg-white border border-gray-300 hover:bg-gray-50"
+                >
+                  <Building2 className="h-4 w-4 mr-2" />
+                  دليل LinkedIn
+                </button>
+                
+                <button
                   onClick={() => {
                     setCurrentPage(1);
                     fetchData();
