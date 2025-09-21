@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query, run } from '@/lib/supabase';
-import { verifyToken } from '@/lib/auth';
+import { Pool } from 'pg';
+import jwt from 'jsonwebtoken';
 
 export async function GET(request: NextRequest) {
   try {
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
-    const user = token ? verifyToken(token) : null;
+    let user = null;
+    if (token) {
+      try {
+        user = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
+      } catch {}
+    }
     
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -17,43 +22,55 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || '';
     const status = searchParams.get('status') || '';
     
+    const pool = new Pool({
+      connectionString: 'postgresql://neondb_owner:npg_0FTPBkvp7Hdo@ep-plain-queen-agvjzsen-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require',
+      ssl: { rejectUnauthorized: false }
+    });
+    
+    const client = await pool.connect();
+    
     let whereClause = '';
     let params: any[] = [];
+    let paramIndex = 1;
     
     if (search) {
-      whereClause += ' WHERE (name LIKE ? OR email LIKE ? OR industry LIKE ?)';
+      whereClause += ` WHERE (name ILIKE $${paramIndex} OR email ILIKE $${paramIndex+1} OR industry ILIKE $${paramIndex+2})`;
       params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+      paramIndex += 3;
     }
     
     if (status) {
-      whereClause += whereClause ? ' AND status = ?' : ' WHERE status = ?';
+      whereClause += whereClause ? ` AND status = $${paramIndex}` : ` WHERE status = $${paramIndex}`;
       params.push(status);
+      paramIndex++;
     }
     
     if (user.role !== 'admin') {
-      whereClause += whereClause ? ' AND assigned_to = ?' : ' WHERE assigned_to = ?';
+      whereClause += whereClause ? ` AND assigned_to = $${paramIndex}` : ` WHERE assigned_to = $${paramIndex}`;
       params.push(user.id);
+      paramIndex++;
     }
     
     const offset = (page - 1) * limit;
-    params.push(limit, offset);
     
-    const companies = await query(`
+    const companiesResult = await client.query(`
       SELECT c.*, u.name as assigned_user_name, cu.name as contacted_user_name
       FROM companies c
       LEFT JOIN users u ON c.assigned_to = u.id
       LEFT JOIN users cu ON c.contacted_by = cu.id
       ${whereClause}
       ORDER BY c.created_at DESC
-      LIMIT ? OFFSET ?
-    `, params);
+      LIMIT $${paramIndex} OFFSET $${paramIndex+1}
+    `, [...params, limit, offset]);
     
-    const countParams = params.slice(0, -2);
-    const totalResult = await query(`SELECT COUNT(*) as total FROM companies${whereClause}`, countParams);
-    const total = totalResult[0].total;
+    const totalResult = await client.query(`SELECT COUNT(*) as total FROM companies${whereClause}`, params);
+    const total = parseInt(totalResult.rows[0].total);
+    
+    client.release();
+    await pool.end();
     
     return NextResponse.json({
-      companies,
+      companies: companiesResult.rows,
       pagination: {
         page,
         limit,
@@ -62,6 +79,7 @@ export async function GET(request: NextRequest) {
       }
     });
   } catch (error) {
+    console.error('Companies fetch error:', error);
     return NextResponse.json({ error: 'Failed to fetch companies' }, { status: 500 });
   }
 }
@@ -69,7 +87,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
-    const user = token ? verifyToken(token) : null;
+    let user = null;
+    if (token) {
+      try {
+        user = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
+      } catch {}
+    }
     
     if (!user || user.role !== 'admin') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -77,12 +100,23 @@ export async function POST(request: NextRequest) {
 
     const { name, email, industry, size, location } = await request.json();
     
-    const result = await run(`
-      INSERT INTO companies (name, email, industry, size, location)
-      VALUES (?, ?, ?, ?, ?)
+    const pool = new Pool({
+      connectionString: 'postgresql://neondb_owner:npg_0FTPBkvp7Hdo@ep-plain-queen-agvjzsen-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require',
+      ssl: { rejectUnauthorized: false }
+    });
+    
+    const client = await pool.connect();
+    
+    const result = await client.query(`
+      INSERT INTO companies (name, email, industry, size, location, status, created_at)
+      VALUES ($1, $2, $3, $4, $5, 'uncontacted', CURRENT_TIMESTAMP)
+      RETURNING id
     `, [name, email, industry, size, location]);
     
-    return NextResponse.json({ id: result.lastID });
+    client.release();
+    await pool.end();
+    
+    return NextResponse.json({ id: result.rows[0].id });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to create company' }, { status: 500 });
   }
