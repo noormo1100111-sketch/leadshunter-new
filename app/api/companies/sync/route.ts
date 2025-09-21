@@ -47,73 +47,41 @@ export async function POST(request: NextRequest) {
       // Connect to the database once before the loop
       const client = await db.connect();
       try {
-      for (const company of companies) {
-        try {
-          console.log('محاولة إدراج شركة:', {
-            name: company.name,
-            email: company.email,
-            industry: company.industry,
-            size: company.size,
-            location: company.location
-          });
-          
-          // تحقق من وجود بيانات صحيحة
-          console.log('فحص اسم الشركة:', {
-            name: company.name,
-            isEmpty: !company.name,
-            isTrimEmpty: company.name?.trim() === '',
-            isUnknown: company.name === 'Unknown Company'
-          });
-          
-          if (!company.name || company.name.trim() === '' || company.name === 'Unknown Company') {
-            console.log('❌ تم تخطي الشركة - اسم غير صحيح:', company.name);
-            skipped++;
-            continue;
-          }
-          
-          console.log('✅ اسم الشركة صحيح، المتابعة...');
-          
-          // التحقق من وجود الشركة أولاً
-          const existingResult = await client.query(
-            'SELECT id, name FROM companies WHERE LOWER(name) = LOWER($1)',
-            [company.name.trim()]
-          );
-          
-          const existing = existingResult.rows[0];
-          console.log(`بحث عن شركة "${company.name}":`, existing);
-          
-          if (existing) {
-            console.log('❌ الشركة موجودة مسبقاً:', company.name, '-> ID:', existing.id);
-            skipped++;
-          } else {
-            console.log('✅ شركة جديدة، بدء الإدراج:', company.name);
-            
+        for (const company of companies) {
+          try {
+            if (!company.name || company.name.trim() === '' || company.name === 'Unknown Company') {
+              console.log('🟡 تم تخطي الشركة - اسم غير صالح:', company.name);
+              skipped++;
+              continue;
+            }
+
+            // استخدام ON CONFLICT لتجنب البحث المسبق وتحسين الأداء
             const result = await client.query(`
               INSERT INTO companies (name, email, industry, size, location, status, created_at)
               VALUES ($1, $2, $3, $4, $5, 'uncontacted', CURRENT_TIMESTAMP)
+              ON CONFLICT (name) DO NOTHING
               RETURNING id
             `, [
               company.name.trim(),
               company.email || null,
               company.industry || null,
               company.size || null,
-              company.location || null
+              company.location || null,
             ]);
-            
-            if (result.rows.length > 0) {
+
+            if (result.rowCount > 0) {
               imported++;
-              console.log('✅ تم إدراج الشركة بنجاح - ID:', result.rows[0].id);
+              console.log('✅ تم إدراج الشركة بنجاح:', company.name, '-> ID:', result.rows[0].id);
             } else {
-              console.log('❌ فشل في إدراج الشركة');
               skipped++;
+              console.log('🟡 الشركة موجودة مسبقاً، تم التخطي:', company.name);
             }
+          } catch (error) {
+            console.error('خطأ في إدراج الشركة:', error);
+            console.error('بيانات الشركة:', company);
+            skipped++;
           }
-        } catch (error) {
-          console.error('خطأ في إدراج الشركة:', error);
-          console.error('بيانات الشركة:', company);
-          skipped++;
         }
-      }
       } finally {
         // Release the client back to the pool
         client.release();

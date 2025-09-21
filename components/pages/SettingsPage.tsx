@@ -73,7 +73,7 @@ export default function SettingsPage({ token }: SettingsPageProps) {
         body: JSON.stringify({
           locations: searchSettings.locations,
           industries: searchSettings.industries,
-          companySizes: searchSettings.companySizes,
+          sizes: searchSettings.companySizes, // تصحيح اسم الحقل ليتطابق مع الواجهة الخلفية
           limit: 10
         })
       });
