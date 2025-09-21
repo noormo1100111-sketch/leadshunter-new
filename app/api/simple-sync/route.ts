@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Pool } from 'pg';
+import { fetchCompaniesFromApollo } from '@/lib/apollo';
 
 export async function POST(request: NextRequest) {
   const pool = new Pool({
@@ -13,23 +14,9 @@ export async function POST(request: NextRequest) {
     
     console.log('إعدادات البحث:', { locations, industries, companySizes, limit });
     
-    const timestamp = Date.now();
-    
-    // إنشاء شركات بناءً على الإعدادات
-    const companies = [];
-    
-    for (let i = 0; i < limit; i++) {
-      const locationIndex = i % locations.length;
-      const location = locations[locationIndex];
-      
-      companies.push({
-        name: `شركة ${location} ${timestamp + i}`,
-        email: `contact${timestamp + i}@company.com`,
-        industry: industries[0] || 'تكنولوجيا',
-        size: 'كبيرة',
-        location: location
-      });
-    }
+    // جلب شركات حقيقية من Apollo
+    const companies = await fetchCompaniesFromApollo(limit);
+    console.log('تم جلب', companies.length, 'شركة من Apollo');
     
     const client = await pool.connect();
     let imported = 0;
@@ -55,8 +42,9 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json({
       success: true,
-      message: `تم إضافة ${imported} شركة جديدة`,
-      imported
+      message: `تم إضافة ${imported} شركة حقيقية من الشرق الأوسط`,
+      imported,
+      total: companies.length
     });
     
   } catch (error) {
