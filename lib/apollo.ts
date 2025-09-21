@@ -47,29 +47,14 @@ export const fetchCompaniesFromApollo = async (limit: number = 50, filters?: {
   // محاكاة تأخير API
   await new Promise(resolve => setTimeout(resolve, 800));
   
-  // تطبيق الفلاتر
+  // استخدام جميع الشركات مؤقتاً
   let filteredCompanies = realCompanies;
   
-  if (filters?.sizes && filters.sizes.length > 0) {
-    filteredCompanies = filteredCompanies.filter(company => 
-      filters.sizes!.includes(company.size)
-    );
-  }
-  
-  if (filters?.industries && filters.industries.length > 0) {
-    filteredCompanies = filteredCompanies.filter(company => 
-      filters.industries!.some(industry => company.industry.includes(industry))
-    );
-  }
-  
-  if (filters?.locations && filters.locations.length > 0) {
-    filteredCompanies = filteredCompanies.filter(company => 
-      filters.locations!.some(location => company.location.includes(location))
-    );
-  }
+  console.log('عدد الشركات المتاحة:', filteredCompanies.length);
   
   const companies = [];
   const batchSize = Math.min(limit, filteredCompanies.length);
+  console.log('سيتم إضافة', batchSize, 'شركة');
   
   for (let i = 0; i < batchSize; i++) {
     const company = filteredCompanies[i % filteredCompanies.length];
