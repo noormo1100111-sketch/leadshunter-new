@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
     
     if (email === 'admin@leadshunter.com' && password === 'password') {
       const token = jwt.sign(
-        { id: 1, email: 'admin@leadshunter.com', role: 'admin' },
+        { id: 1, email: 'admin@leadshunter.com', name: 'Admin', role: 'admin' },
         'fallback-secret',
         { expiresIn: '7d' }
       );

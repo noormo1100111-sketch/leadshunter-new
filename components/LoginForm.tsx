@@ -42,17 +42,9 @@ export default function LoginForm() {
 
     try {
       if (isLogin) {
-        const res = await fetch('/api/simple-login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
-        });
-        
         const success = await login(email, password);
         if (!success) {
-          const data = await res.json();
-          const data = await res.json();
-          setError(data.error || 'بيانات خاطئة');
+          setError('بيانات خاطئة');
         }
       } else {
         const res = await fetch('/api/auth/register', {
