@@ -1,12 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/supabase'; // استيراد الاتصال المركزي
+import { PoolClient } from 'pg';
+import { verifyToken } from '@/lib/auth';
+
+// Define types for better code quality and error prevention
+interface ApolloFilters {
+  locations: string[];
+  industries: string[];
+  sizes: string[];
+}
+
+interface ApolloRequestParams extends ApolloFilters {
+  limit?: number;
+}
+
+interface Company {
+  name: string;
+  email: string | null;
+  industry: string | null;
+  size: string | null;
+  location: string | null;
+}
 
 /**
  * Maps Arabic filter values to English values expected by the Apollo API.
  * @param filters - The filters with Arabic values.
  * @returns The filters with English values.
  */
-const mapFiltersToApollo = (filters: { locations: string[], industries: string[], sizes: string[] }) => {
+const mapFiltersToApollo = (
+  filters: ApolloFilters
+): ApolloFilters => {
   const locationMap: { [key: string]: string } = {
     'السعودية': 'saudi arabia',
     'الإمارات': 'united arab emirates',
@@ -30,7 +53,10 @@ const mapFiltersToApollo = (filters: { locations: string[], industries: string[]
   };
 };
 
-const fetchCompaniesFromApolloWithFilters = async (apiKey: string, { locations = [], industries = [], sizes = [], limit = 5 }) => {
+const fetchCompaniesFromApolloWithFilters = async (
+  apiKey: string,
+  { locations = [], industries = [], sizes = [], limit = 5 }: ApolloRequestParams
+) => {
   if (!apiKey) {
     throw new Error('Apollo API key is missing.');
   }
@@ -68,8 +94,23 @@ const fetchCompaniesFromApolloWithFilters = async (apiKey: string, { locations =
 
 export async function POST(request: NextRequest) {
   try {
+    // 1. التحقق من المصادقة وصلاحيات المدير
+    const token = request.headers.get('authorization')?.replace('Bearer ', '');
+    const user = token ? verifyToken(token) : null;
+
+    if (!user || user.role !== 'admin') {
+      console.log('❌ محاولة وصول غير مصرح بها إلى simple-sync');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    console.log(`👤 المستخدم المدير "${user.name}" بدأ عملية المزامنة المتقدمة.`);
+
     const body = await request.json();
-    const { locations = ['السعودية'], industries = ['البنوك'], sizes = ['متوسطة'], limit = 5 } = body;
+    const {
+      locations = ['السعودية'],
+      industries = ['البنوك'],
+      sizes = ['متوسطة'],
+      limit = 5,
+    }: ApolloRequestParams & { limit: number } = body;
 
     const apolloApiKey = process.env.APOLLO_API_KEY;
     if (!apolloApiKey) {
@@ -81,45 +122,72 @@ export async function POST(request: NextRequest) {
 
     console.log('إعدادات البحث (بعد الترجمة):', { ...apolloFilters, limit });
     
+    // إنشاء كائن جديد يتوافق مع النوع المطلوب لحل مشكلة TypeScript
+    const requestParams: ApolloRequestParams = {
+      ...apolloFilters,
+      limit,
+    };
     // جلب شركات حقيقية من Apollo مع الفلاتر
-    const companies = await fetchCompaniesFromApolloWithFilters(apolloApiKey, { ...apolloFilters, limit });
+    const companies: Company[] = await fetchCompaniesFromApolloWithFilters(apolloApiKey, requestParams);
     console.log('تم جلب', companies.length, 'شركة من Apollo.io');
     
-    const client = await db.connect();
+    if (companies.length === 0) {
+      return NextResponse.json({
+        success: true,
+        message: 'لم يتم العثور على شركات جديدة للمزامنة.',
+        imported: 0,
+        skipped: 0,
+        total: 0,
+      });
+    }
+
+    const client: PoolClient = await db.connect();
     let imported = 0;
-    
-    for (const company of companies) {
-      try {
+    let skipped = 0;
+
+    try {
+      for (const company of companies) {
+        // Validate company data before attempting to insert
         if (!company.name || company.name.trim() === '' || company.name === 'Unknown Company') {
-          console.log('تم تخطي شركة بدون اسم صالح.');
+          console.log('🟡 تم تخطي شركة - اسم غير صالح:', company.name);
+          skipped++;
           continue;
         }
 
+        // Use ON CONFLICT to handle duplicates gracefully and efficiently
         const result = await client.query(
-          'INSERT INTO companies (name, email, industry, size, location, status, created_at) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP) RETURNING id',
-          [company.name.trim(), company.email, company.industry, company.size, company.location, 'uncontacted']
+          `INSERT INTO companies (name, email, industry, size, location, status)
+           VALUES ($1, $2, $3, $4, $5, 'uncontacted')
+           ON CONFLICT (name) DO NOTHING
+           RETURNING id`,
+          [
+            company.name.trim(),
+            company.email,
+            company.industry,
+            company.size,
+            company.location,
+          ]
         );
 
-        if (result.rows.length > 0) {
+        if (result.rowCount > 0) {
           imported++;
-          console.log('Added company:', company.name, 'ID:', result.rows[0].id);
-        }
-      } catch (insertError) {
-        if (insertError instanceof Error && 'code' in insertError && insertError.code === '23505') { // Unique violation
-          console.log('Company already exists:', company.name);
+          console.log('✅ تمت إضافة الشركة:', company.name, '-> ID:', result.rows[0].id);
         } else {
-          console.error(`فشل في إضافة الشركة ${company.name}:`, insertError);
+          skipped++;
+          console.log('🟡 الشركة موجودة مسبقاً، تم التخطي:', company.name);
         }
       }
+    } finally {
+      client.release();
+      console.log('🔌 تم تحرير اتصال قاعدة البيانات.');
     }
-    
-    client.release();
     
     return NextResponse.json({
       success: true,
       message: `تمت المزامنة بنجاح! تمت إضافة ${imported} شركة جديدة.`,
       imported,
-      total: companies.length
+      skipped,
+      total: companies.length,
     });
     
   } catch (error) {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
 import { db } from '@/lib/supabase'; // استيراد الاتصال المركزي
 import { fetchCompaniesFromApollo } from '@/lib/apollo'; // استيراد الدالة الجديدة
+import { verifyToken } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   console.log('🚀 بدء API المزامنة');
@@ -10,12 +10,7 @@ export async function POST(request: NextRequest) {
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
     console.log('🔑 Token موجود:', !!token);
     
-    let user = null;
-    if (token) {
-      try {
-        user = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
-      } catch {}
-    }
+    const user = token ? verifyToken(token) : null;
     console.log('👤 المستخدم:', user?.name, user?.role);
     
     if (!user || user.role !== 'admin') {
@@ -128,7 +123,7 @@ export async function POST(request: NextRequest) {
       const result = { 
         success: true,
         message: `تمت مزامنة ${companies.length} شركة، تم إضافة ${imported} شركة جديدة`,
-        imported, 
+        imported,
         skipped, 
         total: companies.length
       };

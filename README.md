@@ -16,7 +16,7 @@
 
 - **Frontend**: Next.js 14, React, TypeScript, Tailwind CSS
 - **Backend**: Next.js API Routes
-- **Database**: SQLite with custom query layer
+- **Database**: SQLite (for local development), PostgreSQL (for production)
 - **Authentication**: JWT tokens
 - **Charts**: Recharts
 - **Icons**: Lucide React
@@ -184,7 +184,7 @@ vercel
 - `NEXTAUTH_SECRET`: مفتاح عشوائي قوي
 - `JWT_SECRET`: مفتاح عشوائي قوي آخر
 - `APOLLO_API_KEY`: مفتاح Apollo.io API
-- `DATABASE_URL`: ./database.sqlite
+- `DATABASE_URL`: رابط قاعدة بيانات PostgreSQL (مثل Supabase أو Neon)
 
 ### 3. النشر على خادم VPS
 ```bash

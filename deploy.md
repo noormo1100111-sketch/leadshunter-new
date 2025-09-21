@@ -1,7 +1,7 @@
 # خطوات النشر السريع
 
-## 1. Supabase Setup
-- اذهب إلى: https://supabase.com
+## 1. Neon DB Setup
+- اذهب إلى: https://neon.tech
 - أنشئ مشروع: "leadshunter"
 - احفظ كلمة المرور
 - انسخ Connection String

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Settings, Key, Database, Bell, Save, TestTube } from 'lucide-react';
 
 interface SettingsPageProps {
@@ -8,13 +8,12 @@ interface SettingsPageProps {
 }
 
 export default function SettingsPage({ token }: SettingsPageProps) {
-  const [apolloApiKey, setApolloApiKey] = useState('');
   const [testResult, setTestResult] = useState<string | null>(null);
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [searchSettings, setSearchSettings] = useState({
-    locations: ['United States'],
-    industries: ['Technology', 'Software'],
+    locations: ['Saudi Arabia'],
+    industries: ['Technology'],
     companySizes: ['1-10', '11-50', '51-200']
   });
   const [notifications, setNotifications] = useState({
@@ -22,18 +21,6 @@ export default function SettingsPage({ token }: SettingsPageProps) {
     emailReports: false,
     systemAlerts: true
   });
-
-  useEffect(() => {
-    // جلب الإعدادات الحالية
-    const savedKey = localStorage.getItem('apollo_api_key');
-    const savedSettings = localStorage.getItem('apollo_search_settings');
-    if (savedKey) {
-      setApolloApiKey(savedKey);
-    }
-    if (savedSettings) {
-      setSearchSettings(JSON.parse(savedSettings));
-    }
-  }, []);
 
   const testApolloConnection = async () => {
     setTesting(true);
@@ -63,10 +50,7 @@ export default function SettingsPage({ token }: SettingsPageProps) {
     setSaving(true);
     
     try {
-      // حفظ مفتاح Apollo في التخزين المحلي
-      localStorage.setItem('apollo_api_key', apolloApiKey);
-      localStorage.setItem('apollo_search_settings', JSON.stringify(searchSettings));
-      
+      // في المستقبل، يمكن حفظ هذه الإعدادات في قاعدة البيانات لكل مستخدم
       setTestResult('✅ تم حفظ الإعدادات بنجاح');
     } catch (error) {
       setTestResult('❌ فشل في حفظ الإعدادات');
@@ -126,17 +110,11 @@ export default function SettingsPage({ token }: SettingsPageProps) {
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <p className="text-sm text-gray-700">
                   مفتاح API الخاص بـ Apollo.io
-                </label>
-                <div className="flex space-x-3 space-x-reverse">
-                  <input
-                    type="password"
-                    className="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    placeholder="أدخل مفتاح API الخاص بك"
-                    value={apolloApiKey}
-                    onChange={(e) => setApolloApiKey(e.target.value)}
-                  />
+                  <span className="text-xs text-gray-500"> (يتم إعداده من متغيرات البيئة على الخادم)</span>
+                </p>
+                <div className="mt-2">
                   <button
                     onClick={testApolloConnection}
                     disabled={testing}
@@ -186,13 +164,12 @@ export default function SettingsPage({ token }: SettingsPageProps) {
                         setSearchSettings({...searchSettings, locations: values});
                       }}
                     >
-                      <option value="United States">الولايات المتحدة</option>
-                      <option value="United Arab Emirates">الإمارات</option>
-                      <option value="Saudi Arabia">السعودية</option>
-                      <option value="Egypt">مصر</option>
-                      <option value="Jordan">الأردن</option>
-                      <option value="Kuwait">الكويت</option>
-                      <option value="Qatar">قطر</option>
+                      <option value="saudi arabia">السعودية</option>
+                      <option value="united arab emirates">الإمارات</option>
+                      <option value="egypt">مصر</option>
+                      <option value="jordan">الأردن</option>
+                      <option value="kuwait">الكويت</option>
+                      <option value="qatar">قطر</option>
                     </select>
                   </div>
                   
@@ -209,13 +186,13 @@ export default function SettingsPage({ token }: SettingsPageProps) {
                         setSearchSettings({...searchSettings, industries: values});
                       }}
                     >
-                      <option value="Technology">تكنولوجيا</option>
-                      <option value="Software">برمجيات</option>
-                      <option value="Healthcare">رعاية صحية</option>
-                      <option value="Finance">مالية</option>
-                      <option value="Education">تعليم</option>
-                      <option value="Retail">تجارة تجزئة</option>
-                      <option value="Manufacturing">تصنيع</option>
+                      <option value="information technology and services">تكنولوجيا المعلومات</option>
+                      <option value="banking">البنوك</option>
+                      <option value="real estate">العقارات</option>
+                      <option value="software">برمجيات</option>
+                      <option value="healthcare">رعاية صحية</option>
+                      <option value="finance">مالية</option>
+                      <option value="education">تعليم</option>
                     </select>
                   </div>
                   
@@ -232,12 +209,12 @@ export default function SettingsPage({ token }: SettingsPageProps) {
                         setSearchSettings({...searchSettings, companySizes: values});
                       }}
                     >
-                      <option value="1-10">1-10 موظف</option>
-                      <option value="11-50">11-50 موظف</option>
-                      <option value="51-200">51-200 موظف</option>
-                      <option value="201-500">201-500 موظف</option>
-                      <option value="501-1000">501-1000 موظف</option>
-                      <option value="1001+">1001+ موظف</option>
+                      <option value="1,10">1-10 موظف</option>
+                      <option value="11,50">11-50 موظف</option>
+                      <option value="51,200">51-200 موظف</option>
+                      <option value="201,500">201-500 موظف</option>
+                      <option value="501,1000">501-1000 موظف</option>
+                      <option value="1001,5000">1001-5000 موظف</option>
                     </select>
                   </div>
                 </div>
@@ -281,28 +258,13 @@ export default function SettingsPage({ token }: SettingsPageProps) {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     نوع قاعدة البيانات
                   </label>
-                  <input
-                    type="text"
-                    value="SQLite"
-                    disabled
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-50 text-gray-500"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    مسار قاعدة البيانات
-                  </label>
-                  <input
-                    type="text"
-                    value="./database.sqlite"
-                    disabled
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-50 text-gray-500"
-                  />
+                  <p className="text-sm text-gray-600 mt-2">
+                    يستخدم المشروع <span className="font-semibold">SQLite</span> للتطوير المحلي، و <span className="font-semibold">PostgreSQL</span> (عبر Neon/Supabase) عند النشر.
+                  </p>
                 </div>
               </div>
               
-              <div className="flex space-x-3 space-x-reverse">
+              <div className="flex space-x-3 space-x-reverse mt-4">
                 <button className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
                   نسخ احتياطي من قاعدة البيانات
                 </button>
