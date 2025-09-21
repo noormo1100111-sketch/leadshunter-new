@@ -33,10 +33,12 @@ export default function CompaniesPage({ token, userRole, userId }: CompaniesPage
   const [syncSettings, setSyncSettings] = useState<{
     locations: string[];
     industries: string[];
+    sizes: string[];
     limit: number;
   }>({
     locations: ['السعودية'],
-    industries: ['تكنولوجيا'],
+    industries: ['البنوك'],
+    sizes: ['متوسطة'],
     limit: 5
   });
 
@@ -248,7 +250,7 @@ export default function CompaniesPage({ token, userRole, userId }: CompaniesPage
         <div className="bg-white rounded-lg shadow p-4 mb-6 border border-blue-200">
           <h3 className="text-lg font-medium mb-4">خيارات المزامنة</h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium mb-2">المواقع الجغرافية</label>
               <select 
@@ -284,6 +286,23 @@ export default function CompaniesPage({ token, userRole, userId }: CompaniesPage
                 <option value="العقارات">العقارات</option>
                 <option value="الاتصالات">الاتصالات</option>
                 <option value="النفط والغاز">النفط والغاز</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-2">حجم الشركة</label>
+              <select 
+                multiple
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                value={syncSettings.sizes}
+                onChange={(e) => {
+                  const values = Array.from(e.target.selectedOptions, option => option.value);
+                  setSyncSettings({...syncSettings, sizes: values});
+                }}
+              >
+                <option value="صغيرة">صغيرة (50-1000 موظف)</option>
+                <option value="متوسطة">متوسطة (1000-50000 موظف)</option>
+                <option value="كبيرة">كبيرة (50000+ موظف)</option>
               </select>
             </div>
             

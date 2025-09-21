@@ -10,12 +10,12 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { locations = ['السعودية'], industries = ['تكنولوجيا'], companySizes = ['كبيرة'], limit = 5 } = body;
+    const { locations = ['السعودية'], industries = ['البنوك'], sizes = ['متوسطة'], limit = 5 } = body;
     
-    console.log('إعدادات البحث:', { locations, industries, companySizes, limit });
+    console.log('إعدادات البحث:', { locations, industries, sizes, limit });
     
-    // جلب شركات حقيقية من Apollo
-    const companies = await fetchCompaniesFromApollo(limit);
+    // جلب شركات حقيقية من Apollo مع الفلاتر
+    const companies = await fetchCompaniesFromApollo(limit, { locations, industries, sizes });
     console.log('تم جلب', companies.length, 'شركة من Apollo');
     
     const client = await pool.connect();
