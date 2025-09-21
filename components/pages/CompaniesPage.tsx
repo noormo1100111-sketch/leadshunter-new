@@ -29,6 +29,12 @@ export default function CompaniesPage({ token, userRole, userId }: CompaniesPage
   const [selectedCompanies, setSelectedCompanies] = useState<number[]>([]);
   const [assignUserId, setAssignUserId] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [showSyncOptions, setShowSyncOptions] = useState(false);
+  const [syncSettings, setSyncSettings] = useState({
+    locations: ['السعودية'],
+    industries: ['تكنولوجيا'],
+    limit: 5
+  });
 
   const fetchData = async () => {
     try {
@@ -56,43 +62,27 @@ export default function CompaniesPage({ token, userRole, userId }: CompaniesPage
   }, [search, statusFilter]);
 
   const syncApollo = async () => {
-    console.log('🚀 بدء المزامنة من الواجهة');
     setLoading(true);
     try {
-      console.log('📡 إرسال طلب إلى /api/companies/sync');
-      
-      const response = await fetch('/api/companies/sync', {
+      const response = await fetch('/api/simple-sync', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ limit: 10 })
+        body: JSON.stringify(syncSettings)
       });
       
-      console.log('📝 استجابة الخادم:', response.status, response.statusText);
-      
       const data = await response.json();
-      console.log('📊 بيانات الاستجابة:', data);
-      
-      if (data.debug) {
-        console.log('🔍 تفاصيل التشخيص:', data.debug);
-        console.table(data.debug.companiesFromApollo);
-      }
       
       if (response.ok) {
-        alert(data.message || `تمت مزامنة ${data.total} شركة، تم إضافة ${data.imported} شركة جديدة`);
-        console.log('🔄 تحديث قائمة الشركات');
+        alert(data.message || `تم إضافة ${data.imported} شركة جديدة`);
         await fetchData();
-        setStatusFilter('');
-        setCurrentPage(1);
+        setShowSyncOptions(false);
       } else {
-        console.error('❌ خطأ في الاستجابة:', data);
-        alert(`خطأ: ${JSON.stringify(data)}`);
-        await fetchData();
+        alert(`خطأ: ${data.error}`);
       }
     } catch (error) {
-      console.error('❌ خطأ في الشبكة:', error);
       alert('خطأ في الاتصال بالخادم');
     } finally {
       setLoading(false);
@@ -175,12 +165,12 @@ export default function CompaniesPage({ token, userRole, userId }: CompaniesPage
             {userRole === 'admin' && (
               <>
                 <button
-                  onClick={syncApollo}
+                  onClick={() => setShowSyncOptions(!showSyncOptions)}
                   disabled={loading}
                   className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
                 >
                   <RefreshCw className="h-4 w-4 mr-2" />
-                  {loading ? 'جاري المزامنة...' : 'مزامنة أبولو'}
+                  مزامنة شركات
                 </button>
                 
                 <button
@@ -249,6 +239,85 @@ export default function CompaniesPage({ token, userRole, userId }: CompaniesPage
           </div>
         </div>
       </div>
+
+      {/* نافذة خيارات المزامنة */}
+      {showSyncOptions && (
+        <div className="bg-white rounded-lg shadow p-4 mb-6 border border-blue-200">
+          <h3 className="text-lg font-medium mb-4">خيارات المزامنة</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">المواقع الجغرافية</label>
+              <select 
+                multiple
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                value={syncSettings.locations}
+                onChange={(e) => {
+                  const values = Array.from(e.target.selectedOptions, option => option.value);
+                  setSyncSettings({...syncSettings, locations: values});
+                }}
+              >
+                <option value="السعودية">السعودية</option>
+                <option value="الإمارات">الإمارات</option>
+                <option value="مصر">مصر</option>
+                <option value="قطر">قطر</option>
+                <option value="الكويت">الكويت</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-2">الصناعات</label>
+              <select 
+                multiple
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                value={syncSettings.industries}
+                onChange={(e) => {
+                  const values = Array.from(e.target.selectedOptions, option => option.value);
+                  setSyncSettings({...syncSettings, industries: values});
+                }}
+              >
+                <option value="تكنولوجيا">تكنولوجيا</option>
+                <option value="البنوك">البنوك</option>
+                <option value="العقارات">العقارات</option>
+                <option value="الاتصالات">الاتصالات</option>
+                <option value="النفط والغاز">النفط والغاز</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-2">عدد الشركات</label>
+              <input
+                type="number"
+                min="1"
+                max="20"
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                value={syncSettings.limit}
+                onChange={(e) => setSyncSettings({...syncSettings, limit: parseInt(e.target.value) || 5})}
+              />
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <button
+              onClick={syncApollo}
+              disabled={loading}
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
+            >
+              {loading ? 'جاري المزامنة...' : 'بدء المزامنة'}
+            </button>
+            <button
+              onClick={() => setShowSyncOptions(false)}
+              className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
+            >
+              إلغاء
+            </button>
+          </div>
+          
+          <p className="text-xs text-gray-500 mt-2">
+            اضغط Ctrl لاختيار عدة خيارات
+          </p>
+        </div>
+      )}
 
       {/* جدول الشركات */}
       <div className="bg-white shadow-lg rounded-xl border border-gray-100 overflow-hidden">
