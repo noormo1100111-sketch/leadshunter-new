@@ -50,8 +50,16 @@ export default function CompaniesPage({ token, userRole, userId }: CompaniesPage
       const companiesRes = await fetch(`/api/companies?search=${search}&status=${statusFilter}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      
+      if (!companiesRes.ok) {
+        console.error('Failed to fetch companies:', companiesRes.status);
+        setCompanies([]);
+        return;
+      }
+      
       const companiesData = await companiesRes.json();
-      setCompanies(companiesData.companies || []);
+      console.log('Companies data:', companiesData);
+      setCompanies(Array.isArray(companiesData.companies) ? companiesData.companies : []);
 
       if (userRole === 'admin') {
         const usersRes = await fetch('/api/users', {
@@ -450,7 +458,7 @@ export default function CompaniesPage({ token, userRole, userId }: CompaniesPage
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {companies.map((company) => (
+              {(companies || []).map((company) => (
                 <tr key={company.id} className="hover:bg-gray-50">
                   {userRole === 'admin' && (
                     <td className="px-3 py-3 whitespace-nowrap">
@@ -502,7 +510,13 @@ export default function CompaniesPage({ token, userRole, userId }: CompaniesPage
                     )}
                   </td>
                 </tr>
-              ))}
+              )) || (
+                <tr>
+                  <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                    لا توجد شركات
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
