@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Pool } from 'pg';
 import jwt from 'jsonwebtoken';
+import { fetchCompaniesFromApollo } from '@/lib/apollo'; // استيراد الدالة الجديدة
 
 export async function POST(request: NextRequest) {
   console.log('🚀 بدء API المزامنة');
@@ -25,6 +26,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log('📝 بيانات الطلب:', body);
     const { limit = 50 } = body;
+    const apolloApiKey = process.env.APOLLO_API_KEY;
+
+    if (!apolloApiKey) {
+      console.error('❌ مفتاح Apollo API غير موجود في متغيرات البيئة');
+      return NextResponse.json({ error: 'Apollo API key is not configured' }, { status: 500 });
+    }
     
     const pool = new Pool({
       connectionString: 'postgresql://neondb_owner:npg_0FTPBkvp7Hdo@ep-plain-queen-agvjzsen-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require',
@@ -32,14 +39,7 @@ export async function POST(request: NextRequest) {
     });
     
     try {
-      // إنشاء بيانات وهمية للاختبار
-      const companies = [
-        { name: 'Microsoft', email: 'contact@microsoft.com', industry: 'Technology', size: 'Large', location: 'USA' },
-        { name: 'Google', email: 'info@google.com', industry: 'Technology', size: 'Large', location: 'USA' },
-        { name: 'Apple', email: 'support@apple.com', industry: 'Technology', size: 'Large', location: 'USA' },
-        { name: 'Amazon', email: 'hello@amazon.com', industry: 'E-commerce', size: 'Large', location: 'USA' },
-        { name: 'Meta', email: 'contact@meta.com', industry: 'Social Media', size: 'Large', location: 'USA' }
-      ];
+      const companies = await fetchCompaniesFromApollo(apolloApiKey, limit);
       
       console.log('الشركات الوهمية:', companies);
       console.log('عدد الشركات:', companies.length);
