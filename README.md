@@ -31,7 +31,7 @@ npm install
 
 ### 2. Environment Variables
 
-Create a `.env.local` file in the root directory:
+Create a `.env.local` file in the root directory for **local development**:
 
 ```env
 NEXTAUTH_URL=http://localhost:3000
