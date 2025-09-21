@@ -10,11 +10,11 @@ export async function POST(request: NextRequest) {
   try {
     const timestamp = Date.now();
     const companies = [
-      { name: `Microsoft Corp ${timestamp}`, email: `contact${timestamp}@microsoft.com`, industry: 'Technology', size: 'Large', location: 'USA' },
-      { name: `Google Inc ${timestamp}`, email: `info${timestamp}@google.com`, industry: 'Technology', size: 'Large', location: 'USA' },
-      { name: `Apple Ltd ${timestamp}`, email: `support${timestamp}@apple.com`, industry: 'Technology', size: 'Large', location: 'USA' },
-      { name: `Amazon Co ${timestamp}`, email: `hello${timestamp}@amazon.com`, industry: 'E-commerce', size: 'Large', location: 'USA' },
-      { name: `Meta Inc ${timestamp}`, email: `contact${timestamp}@meta.com`, industry: 'Social Media', size: 'Large', location: 'USA' }
+      { name: `أرامكو السعودية ${timestamp}`, email: `contact${timestamp}@aramco.com`, industry: 'النفط والغاز', size: 'كبيرة', location: 'السعودية' },
+      { name: `بنك الإمارات دبي الوطني ${timestamp}`, email: `info${timestamp}@emiratesnbd.ae`, industry: 'البنوك', size: 'كبيرة', location: 'الإمارات' },
+      { name: `مجموعة طلعت مصطفى ${timestamp}`, email: `contact${timestamp}@tmg-holding.com`, industry: 'العقارات', size: 'كبيرة', location: 'مصر' },
+      { name: `شركة الاتصالات السعودية ${timestamp}`, email: `support${timestamp}@stc.com.sa`, industry: 'الاتصالات', size: 'كبيرة', location: 'السعودية' },
+      { name: `بنك قطر الوطني ${timestamp}`, email: `hello${timestamp}@qnb.com`, industry: 'البنوك', size: 'كبيرة', location: 'قطر' }
     ];
     
     const client = await pool.connect();
