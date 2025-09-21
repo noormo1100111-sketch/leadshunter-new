@@ -74,6 +74,39 @@ export default function SettingsPage({ token }: SettingsPageProps) {
       setSaving(false);
     }
   };
+  
+  const syncCompanies = async () => {
+    setTesting(true);
+    setTestResult(null);
+    
+    try {
+      const response = await fetch('/api/simple-sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          locations: searchSettings.locations,
+          industries: searchSettings.industries,
+          companySizes: searchSettings.companySizes,
+          limit: 10
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setTestResult(`✅ ${data.message}`);
+      } else {
+        setTestResult(`❌ ${data.error}`);
+      }
+    } catch (error) {
+      setTestResult('❌ فشل في المزامنة');
+    } finally {
+      setTesting(false);
+    }
+  };
 
   return (
     <div className="p-4 sm:p-6 max-w-full">
@@ -137,7 +170,7 @@ export default function SettingsPage({ token }: SettingsPageProps) {
               
               {/* إعدادات البحث */}
               <div className="mt-6">
-                <h4 className="text-md font-medium text-gray-900 mb-4">إعدادات البحث</h4>
+                <h4 className="text-md font-medium text-gray-900 mb-4">إعدادات البحث والمزامنة</h4>
                 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <div>
@@ -212,6 +245,23 @@ export default function SettingsPage({ token }: SettingsPageProps) {
                 <p className="mt-2 text-xs text-gray-500">
                   اضغط Ctrl (أو Cmd) لاختيار عدة خيارات
                 </p>
+                
+                {/* زر المزامنة */}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h5 className="text-sm font-medium text-gray-900">مزامنة الشركات</h5>
+                      <p className="text-xs text-gray-500">جلب شركات جديدة بناءً على الإعدادات أعلاه</p>
+                    </div>
+                    <button
+                      onClick={syncCompanies}
+                      disabled={testing}
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
+                    >
+                      {testing ? 'جاري المزامنة...' : 'مزامنة الآن'}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

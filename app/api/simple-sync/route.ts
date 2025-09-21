@@ -8,14 +8,56 @@ export async function POST(request: NextRequest) {
   });
 
   try {
+    const body = await request.json();
+    const { locations = ['السعودية'], industries = ['تكنولوجيا'], companySizes = ['كبيرة'], limit = 5 } = body;
+    
+    console.log('إعدادات البحث:', { locations, industries, companySizes, limit });
+    
     const timestamp = Date.now();
-    const companies = [
-      { name: `أرامكو السعودية ${timestamp}`, email: `contact${timestamp}@aramco.com`, industry: 'النفط والغاز', size: 'كبيرة', location: 'السعودية' },
-      { name: `بنك الإمارات دبي الوطني ${timestamp}`, email: `info${timestamp}@emiratesnbd.ae`, industry: 'البنوك', size: 'كبيرة', location: 'الإمارات' },
-      { name: `مجموعة طلعت مصطفى ${timestamp}`, email: `contact${timestamp}@tmg-holding.com`, industry: 'العقارات', size: 'كبيرة', location: 'مصر' },
-      { name: `شركة الاتصالات السعودية ${timestamp}`, email: `support${timestamp}@stc.com.sa`, industry: 'الاتصالات', size: 'كبيرة', location: 'السعودية' },
-      { name: `بنك قطر الوطني ${timestamp}`, email: `hello${timestamp}@qnb.com`, industry: 'البنوك', size: 'كبيرة', location: 'قطر' }
-    ];
+    
+    // إنشاء شركات بناءً على الإعدادات
+    const companyTemplates = {
+      'السعودية': [
+        { name: 'أرامكو', domain: 'aramco.com', industry: 'النفط والغاز' },
+        { name: 'شركة الاتصالات السعودية', domain: 'stc.com.sa', industry: 'الاتصالات' },
+        { name: 'بنك الراجحي', domain: 'alrajhibank.com.sa', industry: 'البنوك' }
+      ],
+      'الإمارات': [
+        { name: 'بنك الإمارات دبي الوطني', domain: 'emiratesnbd.ae', industry: 'البنوك' },
+        { name: 'طيران الإمارات', domain: 'emirates.com', industry: 'الطيران' },
+        { name: 'مجموعة ماجد الفطيم', domain: 'majidgroup.com', industry: 'التجارة' }
+      ],
+      'مصر': [
+        { name: 'مجموعة طلعت مصطفى', domain: 'tmg-holding.com', industry: 'العقارات' },
+        { name: 'بنك مصر', domain: 'banquemisr.com', industry: 'البنوك' },
+        { name: 'اورانج مصر', domain: 'orange.eg', industry: 'الاتصالات' }
+      ],
+      'قطر': [
+        { name: 'بنك قطر الوطني', domain: 'qnb.com', industry: 'البنوك' },
+        { name: 'الخطوط الجوية القطرية', domain: 'qatarairways.com', industry: 'الطيران' }
+      ]
+    };
+    
+    const companies = [];
+    let companyCount = 0;
+    
+    for (const location of locations) {
+      if (companyCount >= limit) break;
+      
+      const templates = companyTemplates[location] || [];
+      for (const template of templates) {
+        if (companyCount >= limit) break;
+        
+        companies.push({
+          name: `${template.name} ${timestamp}`,
+          email: `contact${timestamp}@${template.domain}`,
+          industry: template.industry,
+          size: companySizes[0] || 'كبيرة',
+          location: location
+        });
+        companyCount++;
+      }
+    }
     
     const client = await pool.connect();
     let imported = 0;
