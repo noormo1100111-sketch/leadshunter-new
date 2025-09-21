@@ -42,9 +42,19 @@ export default function LoginForm() {
 
     try {
       if (isLogin) {
-        const success = await login(email, password);
-        if (!success) {
-          setError('بيانات خاطئة');
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          localStorage.setItem('token', data.token);
+          window.location.reload();
+        } else {
+          const data = await res.json();
+          setError(data.error || 'بيانات خاطئة');
         }
       } else {
         const res = await fetch('/api/auth/register', {
