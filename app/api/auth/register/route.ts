@@ -8,8 +8,38 @@ export async function POST(request: NextRequest) {
     ssl: { rejectUnauthorized: false }
   });
 
+  let body;
   try {
-    const { email, password, name } = await request.json();
+    body = await request.json();
+    console.log('Register request body:', body);
+  } catch (parseError) {
+    console.error('JSON parse error:', parseError);
+    return NextResponse.json({ error: 'بيانات غير صحيحة' }, { status: 400 });
+  }
+
+  try {
+    const { email, password, name } = body;
+    
+    // Validation
+    console.log('Validating:', { email: !!email, password: !!password, name: !!name });
+    
+    if (!email || !password || !name) {
+      console.log('Missing fields validation failed');
+      return NextResponse.json({ error: 'جميع الحقول مطلوبة' }, { status: 400 });
+    }
+    
+    if (password.length < 6) {
+      console.log('Password length validation failed');
+      return NextResponse.json({ error: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' }, { status: 400 });
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      console.log('Email format validation failed');
+      return NextResponse.json({ error: 'بريد إلكتروني غير صحيح' }, { status: 400 });
+    }
+    
+    console.log('All validations passed');
     
     const client = await pool.connect();
     
@@ -37,7 +67,9 @@ export async function POST(request: NextRequest) {
       user: result.rows[0]
     });
   } catch (error) {
-    await pool.end();
+    try {
+      await pool.end();
+    } catch {}
     console.error('Registration error:', error);
     return NextResponse.json({ error: 'فشل في التسجيل' }, { status: 500 });
   }

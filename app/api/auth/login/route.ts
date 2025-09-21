@@ -9,26 +9,51 @@ export async function POST(request: NextRequest) {
     ssl: { rejectUnauthorized: false }
   });
 
+  let body;
   try {
-    const { email, password } = await request.json();
+    body = await request.json();
+    console.log('Login request body:', body);
+  } catch (parseError) {
+    console.error('JSON parse error:', parseError);
+    return NextResponse.json({ error: 'بيانات غير صحيحة' }, { status: 400 });
+  }
+
+  try {
+    const { email, password } = body;
+    
+    // Validation
+    console.log('Validating login:', { email: !!email, password: !!password });
+    if (!email || !password) {
+      console.log('Login validation failed - missing fields');
+      return NextResponse.json({ error: 'يرجى إدخال البريد الإلكتروني وكلمة المرور' }, { status: 400 });
+    }
     
     const client = await pool.connect();
     
+    console.log('Querying user with email:', email);
     const result = await client.query('SELECT * FROM users WHERE email = $1', [email]);
+    console.log('Query result rows count:', result.rows.length);
     const user = result.rows[0];
     
     if (!user) {
+      console.log('User not found for email:', email);
       client.release();
       await pool.end();
-      return NextResponse.json({ error: 'بيانات خاطئة' }, { status: 401 });
+      return NextResponse.json({ error: 'البريد الإلكتروني غير موجود' }, { status: 401 });
     }
 
+    console.log('User found:', { id: user.id, email: user.email, role: user.role });
     const isValid = await bcrypt.compare(password, user.password);
+    console.log('Password validation result:', isValid);
+    
     if (!isValid) {
+      console.log('Password validation failed for user:', user.email);
       client.release();
       await pool.end();
-      return NextResponse.json({ error: 'بيانات خاطئة' }, { status: 401 });
+      return NextResponse.json({ error: 'كلمة المرور غير صحيحة' }, { status: 401 });
     }
+    
+    console.log('Login successful for user:', user.email);
 
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
@@ -44,7 +69,9 @@ export async function POST(request: NextRequest) {
       user: { id: user.id, email: user.email, name: user.name, role: user.role }
     });
   } catch (error) {
-    await pool.end();
+    try {
+      await pool.end();
+    } catch {}
     console.error('Login error:', error);
     return NextResponse.json({ error: 'فشل في تسجيل الدخول' }, { status: 500 });
   }

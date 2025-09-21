@@ -18,27 +18,72 @@ export default function LoginForm() {
     setLoading(true);
     setError('');
 
+    // Validation
+    if (!email.trim()) {
+      setError('يرجى إدخال البريد الإلكتروني');
+      setLoading(false);
+      return;
+    }
+    if (!password.trim()) {
+      setError('يرجى إدخال كلمة المرور');
+      setLoading(false);
+      return;
+    }
+    if (!isLogin && !name.trim()) {
+      setError('يرجى إدخال الاسم');
+      setLoading(false);
+      return;
+    }
+    if (password.length < 6) {
+      setError('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+      setLoading(false);
+      return;
+    }
+
     try {
       if (isLogin) {
-        const success = await login(email, password);
-        if (!success) setError('بيانات خاطئة');
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          localStorage.setItem('token', data.token);
+          window.location.reload();
+        } else {
+          const data = await res.json();
+          setError(data.error || 'بيانات خاطئة');
+        }
       } else {
-        const res = await fetch('/api/auth/register', {
+        const res = await fetch('/api/test-register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password, name })
         });
         
         if (res.ok) {
-          const success = await login(email, password);
-          if (!success) setError('تم التسجيل بنجاح ولكن فشل تسجيل الدخول');
+          const loginRes = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+          });
+          
+          if (loginRes.ok) {
+            const data = await loginRes.json();
+            localStorage.setItem('token', data.token);
+            window.location.reload();
+          } else {
+            setError('تم التسجيل بنجاح ولكن فشل تسجيل الدخول');
+          }
         } else {
           const data = await res.json();
           setError(data.error || 'فشل في التسجيل');
         }
       }
     } catch {
-      setError('حدث خطأ');
+      setError('حدث خطأ في الاتصال');
     } finally {
       setLoading(false);
     }
@@ -83,7 +128,9 @@ export default function LoginForm() {
           </div>
 
           {error && (
-            <div className="text-red-600 text-sm text-center">{error}</div>
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm text-center">
+              {error}
+            </div>
           )}
 
           <div>
