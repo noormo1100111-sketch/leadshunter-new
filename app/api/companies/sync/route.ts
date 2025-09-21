@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Pool } from 'pg';
 import jwt from 'jsonwebtoken';
+import { db } from '@/lib/supabase'; // استيراد الاتصال المركزي
 import { fetchCompaniesFromApollo } from '@/lib/apollo'; // استيراد الدالة الجديدة
 
 export async function POST(request: NextRequest) {
@@ -32,11 +32,6 @@ export async function POST(request: NextRequest) {
       console.error('❌ مفتاح Apollo API غير موجود في متغيرات البيئة');
       return NextResponse.json({ error: 'Apollo API key is not configured' }, { status: 500 });
     }
-    
-    const pool = new Pool({
-      connectionString: 'postgresql://neondb_owner:npg_0FTPBkvp7Hdo@ep-plain-queen-agvjzsen-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require',
-      ssl: { rejectUnauthorized: false }
-    });
     
     try {
       const companies = await fetchCompaniesFromApollo(apolloApiKey, limit);
@@ -80,7 +75,7 @@ export async function POST(request: NextRequest) {
           
           console.log('✅ اسم الشركة صحيح، المتابعة...');
           
-          const client = await pool.connect();
+          const client = await db.connect();
           
           // التحقق من وجود الشركة أولاً
           const existingResult = await client.query(
@@ -126,8 +121,6 @@ export async function POST(request: NextRequest) {
         }
       }
       
-      await pool.end();
-      
       const result = { 
         success: true,
         message: `تمت مزامنة ${companies.length} شركة، تم إضافة ${imported} شركة جديدة`,
@@ -139,9 +132,6 @@ export async function POST(request: NextRequest) {
       console.log('✅ نتيجة المزامنة:', result);
       return NextResponse.json(result);
     } catch (syncError: any) {
-      try {
-        await pool.end();
-      } catch {}
       console.error('Sync Error:', syncError.message);
       return NextResponse.json({ 
         error: syncError.message || 'فشل في المزامنة',
