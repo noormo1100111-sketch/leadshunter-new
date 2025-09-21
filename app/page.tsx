@@ -1,10 +1,10 @@
 'use client';
 
-import { useAuth, AuthProvider } from '@/components/AuthProvider';
+import { useAuth } from '@/components/AuthProvider';
 import LoginForm from '@/components/LoginForm';
 import NewDashboard from '@/components/NewDashboard';
 
-function AppContent() {
+export default function Home() {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -16,12 +16,4 @@ function AppContent() {
   }
 
   return user ? <NewDashboard /> : <LoginForm />;
-}
-
-export default function Home() {
-  return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
-  );
 }
